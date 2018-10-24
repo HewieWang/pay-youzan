@@ -1,0 +1,125 @@
+<html lang="zh_CN">
+<head>
+    <meta charset="UTF-8">
+    <title>即时支付</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=0">
+    <meta name="description" content="网站收款">
+    <style>
+        body {
+            text-align: center;
+            background-color: #e0e0e0
+        }
+
+        #app {
+            margin: 0 auto
+        }
+
+        #app h2 {
+            padding-top: 3%
+        }
+
+        #intro {
+            padding-top: 1%;
+            text-align: center
+        }
+
+        #app img {
+            padding-top: 1%;
+            width: 280px
+        }
+
+        #app input {
+            margin: 1%
+        }
+        .btn{
+            padding: 10px 16px;
+            font-size: 18px;
+            line-height: 1.3333333;
+            border-radius: 6px;
+            color: #fff;
+            background-color: #337ab7;
+            border-color: #2e6da4;
+            display: inline-block;
+            margin-bottom: 0;
+            font-weight: 400;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            -ms-touch-action: manipulation;
+            touch-action: manipulation;
+            cursor: pointer;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            background-image: none;
+            border: 1px solid transparent;
+        }
+
+    </style>
+</head>
+<body>
+<div id="app">
+    <h1>在线收款</h1>
+    <div id="intro">
+        <h1>支持支付宝、微信、储蓄卡，扫码付款</h1>
+    </div>
+    <img v-bind:src="qrcode"><br><br>
+    <div id="input_price">
+        金额(单位:元)：<input v-model="price"><br/>
+        收款理由描述：<input v-model="desc"><br/><br/>
+        <button v-on:click="generate" class="btn">点此生成支付二维码</button>
+    </div>
+</div>
+
+</body>
+
+<script src="//cdn.staticfile.org/vue/2.2.6/vue.min.js"></script>
+<script>
+function IsNum(s)
+{
+    if (s!=null && s!="")
+    {
+        return !isNaN(s);
+    }
+    return false;
+}
+var clientId = "";
+var ws = new WebSocket("wss://pay.xu42.cn:11942");
+var app = new Vue({
+    el: "#app",
+    data: {
+        qrcode: "https://img.yzcdn.cn/upload_files/2017/11/25/FlaMfOlko4gdrls7LmdfHDtoACxK.jpg",
+        price: 100,
+        desc: "测试信息"
+    },
+        methods: {
+        generate: function () {
+            if(!IsNum(app.price)){
+                alert('请输入正确金额!');
+                return false;
+            }
+            clientId = Math.random().toString(36).substr(2);
+            ws.send(clientId + "," + app.price*100 + "," + app.desc)
+        }
+    }
+});
+ws.onmessage = function (response) {
+    var responseObj = JSON.parse(response.data);
+    if (responseObj.code !== 200) {
+        alert(responseObj.msg);
+        return
+    }
+    if (responseObj.event === "pay") {
+        if (responseObj.data === "WAIT_BUYER_PAY") {
+            app.qrcode = "https://img.yzcdn.cn/upload_files/2017/11/25/FqZjK96_t4g3PYC7m58RHXQ4PCRm.png"
+        }
+        if (responseObj.data === "TRADE_SUCCESS") {
+            app.qrcode = "https://img.yzcdn.cn/upload_files/2017/11/25/FnFa-_giR389G_rtBBWspFw8esc7.png"
+        }
+    }
+    if (responseObj.event === "create") {
+        app.qrcode = responseObj.data.qr
+    }
+};</script>
+</html>
